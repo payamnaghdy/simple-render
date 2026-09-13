@@ -1,39 +1,47 @@
-cmake_minimum_required(VERSION 4.3)
-project(simple_render)
+cmake_minimum_required(VERSION 3.16)
+project(simple_render C ASM)
 
-set(LINKER_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/stm32f103c8.ld")
+set(LINKER_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/linker/stm32f103c8.ld")
 
-set(PLATFORM "linux" CACHE STRING "Target platform for the renderer")
+set(PLATFORM "linux" CACHE STRING "Target platform: linux or stm")
 set_property(CACHE PLATFORM PROPERTY STRINGS "linux" "stm")
 
-set(SOURCE_FILES main2.c display.c utils.c)
+set(COMMON_SOURCES
+    src/display.c
+    src/utils.c
+)
+
+set(COMMON_INCLUDES
+    include
+)
 
 if(PLATFORM STREQUAL "linux")
-  list(APPEND SOURCE_FILES linux_render.c)
-  add_definitions(-DPLATFORM_LINUX)
-  find_package(SDL2 REQUIRED)
+    list(APPEND COMMON_SOURCES src/platform/linux/linux_render.c)
+    list(APPEND COMMON_SOURCES examples/game_of_life.c)
+    add_definitions(-DPLATFORM_LINUX)
+    find_package(SDL2 REQUIRED)
+    add_executable(game_of_life ${COMMON_SOURCES})
+    target_link_libraries(game_of_life PRIVATE SDL2::SDL2)
+    target_include_directories(game_of_life PRIVATE ${COMMON_INCLUDES})
+
 elseif(PLATFORM STREQUAL "stm")
-    list(APPEND SOURCE_FILES stm32_render.c startup_stm32f103.s) # Add your startup file
-    add_executable(${PROJECT_NAME}.elf ${SOURCE_FILES})
-    target_link_options(simple_render.elf PRIVATE 
-    -T${LINKER_SCRIPT} 
-    -Wl,--gc-sections  # Removes unused code
-    -Wl,-Map=${PROJECT_NAME}.map
-    )
+    list(APPEND COMMON_SOURCES src/platform/stm32/stm32_render.c)
+    list(APPEND COMMON_SOURCES examples/game_of_life.c)
+    list(APPEND COMMON_SOURCES startup/startup_stm32f103.s)
+    add_definitions(-DSTM)
     
-    # Custom command to convert ELF to BIN
-    add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
-        COMMAND arm-none-eabi-objcopy -O binary ${PROJECT_NAME}.elf ${PROJECT_NAME}.bin
+    add_executable(game_of_life.elf ${COMMON_SOURCES})
+    target_link_options(game_of_life.elf PRIVATE
+        -T${LINKER_SCRIPT}
+        -Wl,--gc-sections
+        -Wl,-Map=game_of_life.map
+    )
+    target_include_directories(game_of_life.elf PRIVATE ${COMMON_INCLUDES})
+    
+    add_custom_command(TARGET game_of_life.elf POST_BUILD
+        COMMAND arm-none-eabi-objcopy -O binary game_of_life.elf game_of_life.bin
     )
 endif()
 
-
-
-add_executable(${PROJECT_NAME} ${SOURCE_FILES})
-
-
-if(PLATFORM STREQUAL "linux")
-  target_link_libraries(${PROJECT_NAME} PRIVATE SDL2::SDL2)
-endif()
-
-
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)

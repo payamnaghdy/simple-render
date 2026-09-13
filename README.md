@@ -1,11 +1,21 @@
-# Minimal Graphics engine for STM32 
+# Minimal Graphics Engine for STM32
 
-This is a bare metal graphics engine for stm32, you can use it to interact with displays that support SPI 
-test environment is on linux using SDL2 lib.
+Bare metal graphics engine for STM32 with SPI display support. Linux test environment uses SDL2.
 
-# Build stm (production)
+## Build STM32 (Production)
+```bash
 cmake -B build-stm -DPLATFORM=stm -DCMAKE_TOOLCHAIN_FILE=arm-none-eabi.cmake
 cmake --build build-stm
+```
+Output: `build-stm/simple_render.bin` (flashable binary)
 
-# Build linux (test environment)
-cmake -B build -DPLATFORM=linux   
+## Build Linux (Test Environment)
+```bash
+cmake -B build -DPLATFORM=linux
+cmake --build build
+```
+Output: `build/simple_render` (SDL2 executable)
+
+## Requirements
+- **STM32**: ARM GCC toolchain (`arm-none-eabi-gcc`)
+- **Linux**: SDL2 development libraries
